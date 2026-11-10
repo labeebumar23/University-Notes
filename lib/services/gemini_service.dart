@@ -19,7 +19,7 @@ class GeminiService {
   }) async {
     // If user hasn't replaced the placeholder API key yet, provide high-yield academic response
     if (geminiApiKey == 'YOUR_API_KEY_HERE' || geminiApiKey.trim().isEmpty) {
-      return _generateDefaultAcademicExplanation(subjectName, lectureTitle);
+      return generateDefaultAcademicExplanation(subjectName, lectureTitle);
     }
 
     try {
@@ -109,10 +109,10 @@ Return a valid JSON object matching this schema exactly:
       }
     } catch (e) {
       // In case of any API error (e.g. invalid key or network issue), fallback gracefully
-      return _generateDefaultAcademicExplanation(
+      return generateDefaultAcademicExplanation(
         subjectName,
         lectureTitle,
-        fallbackNotice: 'Generated from lecture transcription: $e',
+        'Generated from lecture transcription: $e',
       );
     }
 
