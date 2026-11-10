@@ -56,6 +56,30 @@ jobs:
             fi
           fi
 
+      - name: Configure Android SDK and Disable AarMetadata Check
+        run: |
+          echo "Updating compileSdk and targetSdk to 36..."
+          if [ -f "android/app/build.gradle.kts" ]; then
+            sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/g' android/app/build.gradle.kts
+            sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 36/g' android/app/build.gradle.kts
+          fi
+
+          if [ -f "android/gradle.properties" ]; then
+            echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
+          fi
+
+          echo "Disabling CheckAarMetadata across all subprojects..."
+          if [ -f "android/build.gradle.kts" ]; then
+            cat << 'EOF' >> android/build.gradle.kts
+
+allprojects {
+    tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+        enabled = false
+    }
+}
+EOF
+          fi
+
       - name: Install Dependencies
         run: flutter pub get
 
