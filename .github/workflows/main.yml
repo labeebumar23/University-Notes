@@ -70,14 +70,12 @@ jobs:
 
           echo "Disabling CheckAarMetadata across all subprojects..."
           if [ -f "android/build.gradle.kts" ]; then
-            cat << 'EOF' >> android/build.gradle.kts
-
-allprojects {
-    tasks.matching { it.name.contains("AarMetadata") }.configureEach {
-        enabled = false
-    }
-}
-EOF
+            echo "" >> android/build.gradle.kts
+            echo "allprojects {" >> android/build.gradle.kts
+            echo "    tasks.matching { it.name.contains(\"AarMetadata\") }.configureEach {" >> android/build.gradle.kts
+            echo "        enabled = false" >> android/build.gradle.kts
+            echo "    }" >> android/build.gradle.kts
+            echo "}" >> android/build.gradle.kts
           fi
 
       - name: Install Dependencies
