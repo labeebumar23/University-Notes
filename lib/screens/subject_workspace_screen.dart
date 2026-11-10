@@ -237,7 +237,7 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
 
   Future<void> _pickAndUploadPdf(String subjectCode) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
         allowMultiple: true,
