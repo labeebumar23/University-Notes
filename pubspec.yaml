@@ -1,0 +1,32 @@
+name: uninotes_ai
+description: "UniNotes AI - Modern Scholastic AI Study App with Material 3"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  file_picker: ^8.0.0
+  path_provider: ^2.1.2
+  open_filex: ^4.5.0
+  record: ^5.1.2
+  permission_handler: ^11.3.1
+  audioplayers: ^6.0.0
+  google_generative_ai: ^0.4.6
+  google_sign_in: ^6.2.1
+  googleapis: ^13.1.0
+  http: ^1.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
