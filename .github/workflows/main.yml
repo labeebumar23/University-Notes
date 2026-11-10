@@ -56,7 +56,7 @@ jobs:
             fi
           fi
 
-      - name: Configure Android SDK and Subprojects compileSdk
+      - name: Configure Android SDK
         run: |
           echo "Updating compileSdk and targetSdk to 36 in app build.gradle.kts..."
           if [ -f "android/app/build.gradle.kts" ]; then
@@ -66,27 +66,6 @@ jobs:
 
           if [ -f "android/gradle.properties" ]; then
             echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
-          fi
-
-          echo "Setting compileSdk to 36 across all subprojects..."
-          if [ -f "android/build.gradle.kts" ]; then
-            echo "" >> android/build.gradle.kts
-            echo "subprojects {" >> android/build.gradle.kts
-            echo "    afterEvaluate {" >> android/build.gradle.kts
-            echo "        val androidExt = project.extensions.findByName(\"android\")" >> android/build.gradle.kts
-            echo "        if (androidExt != null) {" >> android/build.gradle.kts
-            echo "            try {" >> android/build.gradle.kts
-            echo "                val m = androidExt.javaClass.getMethod(\"setCompileSdk\", Int::class.java)" >> android/build.gradle.kts
-            echo "                m.invoke(androidExt, 36)" >> android/build.gradle.kts
-            echo "            } catch (e: Exception) {" >> android/build.gradle.kts
-            echo "                try {" >> android/build.gradle.kts
-            echo "                    val m = androidExt.javaClass.getMethod(\"setCompileSdkVersion\", Int::class.java)" >> android/build.gradle.kts
-            echo "                    m.invoke(androidExt, 36)" >> android/build.gradle.kts
-            echo "                } catch (_: Exception) {}" >> android/build.gradle.kts
-            echo "            }" >> android/build.gradle.kts
-            echo "        }" >> android/build.gradle.kts
-            echo "    }" >> android/build.gradle.kts
-            echo "}" >> android/build.gradle.kts
           fi
 
       - name: Install Dependencies
