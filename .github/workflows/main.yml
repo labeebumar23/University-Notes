@@ -23,7 +23,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -34,8 +33,27 @@ jobs:
       - name: Ensure Android platform scaffolding exists
         run: |
           if [ ! -d "android" ]; then
-            echo "Android directory not found. Generating Android platform scaffolding..."
+            echo "Preserving project source and configuration..."
+            cp -r lib lib_backup
+            cp pubspec.yaml pubspec_backup.yaml
+
+            echo "Generating Android platform scaffolding..."
             flutter create . --platforms=android --org com.uninotes
+
+            echo "Restoring project source and configuration..."
+            rm -rf lib
+            mv lib_backup lib
+            cp pubspec_backup.yaml pubspec.yaml
+          fi
+
+      - name: Configure Android Permissions
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            if ! grep -q "android.permission.RECORD_AUDIO" "$MANIFEST"; then
+              echo "Injecting microphone and audio recording permissions..."
+              sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.INTERNET" />' "$MANIFEST"
+            fi
           fi
 
       - name: Install Dependencies
@@ -51,4 +69,3 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
-
