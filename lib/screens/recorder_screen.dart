@@ -388,7 +388,7 @@ class _RecorderScreenState extends State<RecorderScreen>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerHigh,
+              color: AppColors.surfaceHigh,
               shape: BoxShape.circle,
             ),
             child: const Icon(

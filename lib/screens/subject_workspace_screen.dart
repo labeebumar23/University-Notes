@@ -1526,7 +1526,6 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
       ),
     );
   }
-  }
 
   Widget _buildCoursePdfsSection(String subjectCode, List<PdfItemData> pdfs) {
     return Column(

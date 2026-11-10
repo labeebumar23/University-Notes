@@ -163,7 +163,7 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
                     subjectCount: 2,
                     fileCount: 0,
                     fileLabel: 'Files',
-                    icon: Icons.event_upcoming,
+                    icon: Icons.upcoming,
                     isCurrent: false,
                     iconBgColor: AppColors.surfaceHigh,
                     iconColor: AppColors.onSurfaceVariant,

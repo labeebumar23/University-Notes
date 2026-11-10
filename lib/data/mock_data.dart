@@ -31,7 +31,7 @@ class MockData {
       subjectCount: 5,
       fileCount: 4,
       fileLabel: 'Syllabi Ready',
-      icon: Icons.event_upcoming,
+      icon: Icons.upcoming,
       isCurrent: false,
       iconBgColor: AppColors.surfaceHigh,
       iconColor: AppColors.onSurfaceVariant,

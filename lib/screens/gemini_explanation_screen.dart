@@ -868,7 +868,7 @@ class _GeminiExplanationScreenState extends State<GeminiExplanationScreen> {
                   style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13,
-                    color: AppColors.onSecondaryFixedVariant,
+                    color: AppColors.onSurfaceVariant,
                     height: 1.5,
                   ),
                 ),

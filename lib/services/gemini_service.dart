@@ -116,14 +116,14 @@ Return a valid JSON object matching this schema exactly:
       );
     }
 
-    return _generateDefaultAcademicExplanation(subjectName, lectureTitle);
+    return generateDefaultAcademicExplanation(subjectName, lectureTitle);
   }
 
-  static GeminiExplanationResult _generateDefaultAcademicExplanation(
-    String subjectName,
-    String lectureTitle, {
+  static GeminiExplanationResult generateDefaultAcademicExplanation([
+    String subjectName = 'Data Structures & Algorithms',
+    String lectureTitle = 'Lecture 14: AVL Trees & Balance Factors',
     String? fallbackNotice,
-  }) {
+  ]) {
     return const GeminiExplanationResult(
       summary:
           'Binary search trees degrade to O(n) worst-case lookup when inputs arrive pre-sorted, necessitating strict structural rebalancing. AVL trees maintain an invariant where the height differential between left and right subtrees never exceeds ±1 for any given node. When mutations violate this threshold, localized single or double tree rotations restore the O(log n) operational envelope in strictly constant time.',
