@@ -311,14 +311,14 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
           // Permanently copy PDF into the app's internal documents directory for 100% offline access
           if (sourcePath != null && File(sourcePath).existsSync()) {
             await File(sourcePath).copy(internalDestinationPath);
-          } else if (file.bytes != null) {
-            await File(internalDestinationPath).writeAsBytes(file.bytes!);
           }
 
           final localFile = File(internalDestinationPath);
-          int fileSizeInBytes = localFile.existsSync()
+          final fileSizeInBytes = localFile.existsSync()
               ? localFile.lengthSync()
-              : (file.lengthSync() ?? (await file.length()) ?? 0);
+              : (sourcePath != null && File(sourcePath).existsSync()
+                  ? File(sourcePath).lengthSync()
+                  : 0);
           final sizeString = _formatFileSize(fileSizeInBytes);
 
           final newPdf = PdfItemData(
