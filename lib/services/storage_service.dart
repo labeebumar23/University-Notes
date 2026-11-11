@@ -471,6 +471,14 @@ class StorageService {
       if (lecturesDir.existsSync()) {
         lecturesDir.deleteSync(recursive: true);
       }
+      final cacheDir = await getTemporaryDirectory();
+      if (cacheDir.existsSync()) {
+        for (final item in cacheDir.listSync()) {
+          try {
+            item.deleteSync(recursive: true);
+          } catch (_) {}
+        }
+      }
     } catch (_) {}
 
     final prefs = await _getPrefs();

@@ -374,7 +374,9 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete "${pdf.title}"?'),
-        content: const Text('This will remove this PDF from this course.'),
+        content: const Text(
+          'This will permanently delete this PDF file from your device storage.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -385,6 +387,14 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
               Navigator.pop(context);
               await StorageService.instance.deletePdfFromSubject(subCode, pdf.title);
               await _loadPdfs(subCode);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted "${pdf.title}" from storage'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -400,7 +410,9 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete "${lecture.title}"?'),
-        content: const Text('This will permanently delete this audio recording from your device.'),
+        content: const Text(
+          'This will permanently delete this audio recording (.m4a) from your device storage.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -415,11 +427,152 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
               }
               await StorageService.instance.deleteLectureFromSubject(subCode, lecture.id);
               await _loadLectures(subCode);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted "${lecture.title}" from storage'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showDeleteSubjectConfirm() {
+    final sub = _currentSubject;
+    if (sub == null) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${sub.code}?'),
+        content: Text(
+          'This will permanently delete ${sub.name} and all its ${_pdfs.length} PDFs and ${_lectures.length} audio recordings from device storage.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await StorageService.instance.deleteSubject(sub.code);
+              if (mounted) {
+                Navigator.pop(context); // Return to subjects screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${sub.code} deleted.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditSubjectDialog() {
+    final sub = _currentSubject;
+    if (sub == null) return;
+    final nameCtrl = TextEditingController(text: sub.name);
+    final profCtrl = TextEditingController(text: sub.professor);
+    final scheduleCtrl = TextEditingController(text: sub.schedule);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Edit ${sub.code}',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Course Name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: profCtrl,
+              decoration: const InputDecoration(labelText: 'Professor / Instructor'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: scheduleCtrl,
+              decoration: const InputDecoration(labelText: 'Class Schedule'),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final updated = sub.copyWith(
+                    name: nameCtrl.text.trim().isEmpty ? sub.name : nameCtrl.text.trim(),
+                    professor: profCtrl.text.trim().isEmpty ? sub.professor : profCtrl.text.trim(),
+                    schedule: scheduleCtrl.text.trim(),
+                  );
+                  await StorageService.instance.updateSubject(updated);
+                  if (mounted) {
+                    setState(() {
+                      _currentSubject = updated;
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${updated.code} updated!'),
+                        backgroundColor: AppColors.royalBlue,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Save Changes'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -565,6 +718,39 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
                 ),
               ],
             ),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, size: 20, color: AppColors.onSurfaceVariant),
+            tooltip: 'Course options',
+            onSelected: (value) {
+              if (value == 'edit') {
+                _showEditSubjectDialog();
+              } else if (value == 'delete') {
+                _showDeleteSubjectConfirm();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, color: AppColors.royalBlue, size: 18),
+                    SizedBox(width: 8),
+                    Text('Edit Course'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: AppColors.error, size: 18),
+                    SizedBox(width: 8),
+                    Text('Delete Course', style: TextStyle(color: AppColors.error)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

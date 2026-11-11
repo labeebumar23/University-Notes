@@ -3,7 +3,10 @@ import '../services/drive_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_header.dart';
+import '../widgets/bottom_nav_bar.dart';
 import 'onboarding_screen.dart';
+import 'recorder_screen.dart';
+import 'subject_workspace_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -41,6 +44,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _totalBytes = usage['total'] ?? 0;
         _isLoading = false;
       });
+    }
+  }
+
+  void _onBottomNavTapped(int index) {
+    if (index == 0) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } else if (index == 1) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const RecorderScreen(),
+        ),
+      ).then((_) => _loadSettings());
+    } else if (index == 2) {
+      _navigateToFirstWorkspace();
+    } else if (index == 3) {
+      // Already on settings
+      return;
+    }
+  }
+
+  Future<void> _navigateToFirstWorkspace() async {
+    final subjects = await StorageService.instance.getSubjects();
+    if (subjects.isNotEmpty) {
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SubjectWorkspaceScreen(subject: subjects.first),
+        ),
+      ).then((_) => _loadSettings());
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add a semester and subject first to open Workspace!'),
+          backgroundColor: AppColors.royalBlue,
+        ),
+      );
     }
   }
 
@@ -213,6 +253,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+      bottomNavigationBar: UniBottomNavBar(
+        currentIndex: 3,
+        onTap: _onBottomNavTapped,
+      ),
     );
   }
 

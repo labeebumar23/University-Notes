@@ -769,17 +769,28 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
           ),
         ),
         const SizedBox(width: 12),
-        // Student Monogram Avatar
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: AppColors.royalBlue,
-          child: Text(
-            _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+        // Student Monogram Avatar (Tappable to Settings)
+        InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+            ).then((_) => _loadData());
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Tooltip(
+            message: 'Open Settings',
+            child: CircleAvatar(
+              radius: 24,
+              backgroundColor: AppColors.royalBlue,
+              child: Text(
+                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ),

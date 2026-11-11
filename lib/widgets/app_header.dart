@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/settings_screen.dart';
 import '../theme/app_colors.dart';
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -210,26 +211,36 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                       },
                     ),
                     const SizedBox(width: 2),
-                    // Profile Avatar with Ring
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.primaryFixed,
-                          width: 2,
-                        ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: AppColors.primaryFixed,
-                        backgroundImage: const NetworkImage(
-                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          size: 16,
-                          color: AppColors.royalBlue,
+                    // Profile Avatar with Ring (Tappable to Settings)
+                    InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(18),
+                      child: Tooltip(
+                        message: 'Student Settings',
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.primaryFixed,
+                              width: 2,
+                            ),
+                          ),
+                          child: const CircleAvatar(
+                            radius: 14,
+                            backgroundColor: AppColors.royalBlue,
+                            child: Icon(
+                              Icons.person,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
