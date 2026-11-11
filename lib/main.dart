@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'services/storage_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_semesters_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/semester_subjects_screen.dart';
 import 'screens/subject_workspace_screen.dart';
 import 'screens/recorder_screen.dart';
-import 'screens/gemini_explanation_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,18 +27,65 @@ class UniNotesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'UniNotes AI',
+      title: 'UniNotes',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      initialRoute: '/',
+      home: const _AppRootLauncher(),
       routes: {
-        '/': (context) => const HomeSemestersScreen(),
+        '/onboarding': (context) => const OnboardingScreen(),
+        '/home': (context) => const HomeSemestersScreen(),
         '/subjects': (context) => const SemesterSubjectsScreen(),
         '/workspace': (context) => const SubjectWorkspaceScreen(),
         '/recorder': (context) => const RecorderScreen(),
-        '/explanation': (context) => const GeminiExplanationScreen(),
       },
     );
   }
 }
 
+class _AppRootLauncher extends StatefulWidget {
+  const _AppRootLauncher();
+
+  @override
+  State<_AppRootLauncher> createState() => _AppRootLauncherState();
+}
+
+class _AppRootLauncherState extends State<_AppRootLauncher> {
+  bool _isLoading = true;
+  bool _isOnboarded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboarding();
+  }
+
+  Future<void> _checkOnboarding() async {
+    final onboarded = await StorageService.instance.isOnboarded();
+    if (mounted) {
+      setState(() {
+        _isOnboarded = onboarded;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFFAFAEF),
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF004AAD)),
+          ),
+        ),
+      );
+    }
+
+    if (_isOnboarded) {
+      return const HomeSemestersScreen();
+    } else {
+      return const OnboardingScreen();
+    }
+  }
+}

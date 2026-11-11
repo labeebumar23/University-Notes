@@ -46,9 +46,9 @@ class UniBottomNavBar extends StatelessWidget {
               _buildRecorderItem(),
               _buildNavItem(
                 index: 2,
-                icon: Icons.auto_awesome_motion_outlined,
-                activeIcon: Icons.auto_awesome_motion,
-                label: 'AI Notes',
+                icon: Icons.graphic_eq_outlined,
+                activeIcon: Icons.graphic_eq,
+                label: 'Audio Notes',
               ),
               _buildNavItem(
                 index: 3,

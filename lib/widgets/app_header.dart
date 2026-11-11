@@ -116,36 +116,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        // Gemini Pill Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.tertiaryFixed,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(
-                                Icons.auto_awesome,
-                                size: 10,
-                                color: AppColors.tertiaryContainer,
-                              ),
-                              SizedBox(width: 2),
-                              Text(
-                                'Gemini',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.tertiaryContainer,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                     if (subtitle != null) ...[
