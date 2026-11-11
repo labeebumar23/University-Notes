@@ -12,6 +12,7 @@ class SemesterData {
   final String fileLabel;
   final bool isLiveSynced;
   final String? gpa;
+  final double? sgpa;
   final IconData icon;
   final bool isCurrent;
   final Color? iconBgColor;
@@ -29,6 +30,7 @@ class SemesterData {
     required this.fileLabel,
     this.isLiveSynced = false,
     this.gpa,
+    this.sgpa,
     required this.icon,
     this.isCurrent = false,
     this.iconBgColor,
@@ -47,6 +49,7 @@ class SemesterData {
     String? fileLabel,
     bool? isLiveSynced,
     String? gpa,
+    double? sgpa,
     IconData? icon,
     bool? isCurrent,
     Color? iconBgColor,
@@ -64,6 +67,7 @@ class SemesterData {
       fileLabel: fileLabel ?? this.fileLabel,
       isLiveSynced: isLiveSynced ?? this.isLiveSynced,
       gpa: gpa ?? this.gpa,
+      sgpa: sgpa ?? this.sgpa,
       icon: icon ?? this.icon,
       isCurrent: isCurrent ?? this.isCurrent,
       iconBgColor: iconBgColor ?? this.iconBgColor,
@@ -84,6 +88,7 @@ class SemesterData {
       'fileLabel': fileLabel,
       'isLiveSynced': isLiveSynced,
       'gpa': gpa,
+      'sgpa': sgpa,
       'iconCodePoint': icon.codePoint,
       'isCurrent': isCurrent,
       'iconBgColor': iconBgColor?.value,
@@ -107,6 +112,8 @@ class SemesterData {
       fileLabel: json['fileLabel'] as String? ?? 'Files',
       isLiveSynced: json['isLiveSynced'] as bool? ?? false,
       gpa: json['gpa'] as String?,
+      sgpa: (json['sgpa'] as num?)?.toDouble() ??
+          (json['gpa'] != null ? double.tryParse(json['gpa'].toString()) : null),
       icon: IconData(
         json['iconCodePoint'] as int? ?? Icons.school.codePoint,
         fontFamily: 'MaterialIcons',
@@ -138,6 +145,11 @@ class SubjectData {
   final bool hasPulse;
   final String category; // 'all', 'active', 'ai'
   final String semesterId;
+  final int classesAttended;
+  final int totalClasses;
+  final String quickNotes;
+  final int creditHours;
+  final String? grade;
 
   const SubjectData({
     required this.code,
@@ -155,6 +167,11 @@ class SubjectData {
     this.hasPulse = false,
     this.category = 'all',
     this.semesterId = 'sem-3',
+    this.classesAttended = 0,
+    this.totalClasses = 0,
+    this.quickNotes = '',
+    this.creditHours = 3,
+    this.grade,
   });
 
   SubjectData copyWith({
@@ -173,6 +190,11 @@ class SubjectData {
     bool? hasPulse,
     String? category,
     String? semesterId,
+    int? classesAttended,
+    int? totalClasses,
+    String? quickNotes,
+    int? creditHours,
+    String? grade,
   }) {
     return SubjectData(
       code: code ?? this.code,
@@ -190,6 +212,11 @@ class SubjectData {
       hasPulse: hasPulse ?? this.hasPulse,
       category: category ?? this.category,
       semesterId: semesterId ?? this.semesterId,
+      classesAttended: classesAttended ?? this.classesAttended,
+      totalClasses: totalClasses ?? this.totalClasses,
+      quickNotes: quickNotes ?? this.quickNotes,
+      creditHours: creditHours ?? this.creditHours,
+      grade: grade ?? this.grade,
     );
   }
 
@@ -210,6 +237,11 @@ class SubjectData {
       'hasPulse': hasPulse,
       'category': category,
       'semesterId': semesterId,
+      'classesAttended': classesAttended,
+      'totalClasses': totalClasses,
+      'quickNotes': quickNotes,
+      'creditHours': creditHours,
+      'grade': grade,
     };
   }
 
@@ -236,6 +268,11 @@ class SubjectData {
       hasPulse: json['hasPulse'] as bool? ?? false,
       category: json['category'] as String? ?? 'all',
       semesterId: json['semesterId'] as String? ?? 'sem-3',
+      classesAttended: json['classesAttended'] as int? ?? 0,
+      totalClasses: json['totalClasses'] as int? ?? 0,
+      quickNotes: json['quickNotes'] as String? ?? '',
+      creditHours: json['creditHours'] as int? ?? 3,
+      grade: json['grade'] as String?,
     );
   }
 }

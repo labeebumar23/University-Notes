@@ -73,6 +73,33 @@ class AppColors {
   static const Color success = Color(0xFF2E7D32);
   static const Color successContainer = Color(0xFFE8F5E9);
 
+  // Dark Mode Support
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color darkSurface = Color(0xFF18181B);
+  static const Color darkCard = Color(0xFF1E1E24);
+  static const Color darkSurfaceContainer = Color(0xFF272730);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+  static const Color darkBorder = Color(0xFF2E2E38);
+
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color cardBg(BuildContext context) =>
+      isDark(context) ? darkCard : surfaceLowest;
+
+  static Color bg(BuildContext context) =>
+      isDark(context) ? darkBackground : surface;
+
+  static Color textPrimary(BuildContext context) =>
+      isDark(context) ? darkTextPrimary : onSurface;
+
+  static Color textSecondary(BuildContext context) =>
+      isDark(context) ? darkTextSecondary : onSurfaceVariant;
+
+  static Color border(BuildContext context) =>
+      isDark(context) ? darkBorder : outlineVariant;
+
   // Custom Gradients
   static const LinearGradient aiGoldGradient = LinearGradient(
     colors: [Color(0xFFE2B774), Color(0xFFB9915E)],

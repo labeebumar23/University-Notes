@@ -368,6 +368,304 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
     );
   }
 
+  Future<void> _showSgpaCalculator(SemesterData semester) async {
+    final allSubjects = await StorageService.instance.getSubjects();
+    final semesterSubjects = allSubjects.where((s) => s.semesterId == semester.id).toList();
+
+    if (semesterSubjects.isEmpty) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('No Courses Found'),
+          content: Text('Please add courses to ${semester.title} before calculating SGPA.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final Map<String, int> creditMap = {
+      for (final s in semesterSubjects) s.code: s.creditHours > 0 ? s.creditHours : 3
+    };
+    final Map<String, String> gradeMap = {
+      for (final s in semesterSubjects) s.code: s.grade ?? 'A'
+    };
+
+    final gradeScale = {
+      'A': 4.0,
+      'A-': 3.7,
+      'B+': 3.3,
+      'B': 3.0,
+      'B-': 2.7,
+      'C+': 2.3,
+      'C': 2.0,
+      'C-': 1.7,
+      'D': 1.0,
+      'F': 0.0,
+    };
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          double totalPoints = 0;
+          int totalCredits = 0;
+          for (final s in semesterSubjects) {
+            final cr = creditMap[s.code] ?? 3;
+            final gr = gradeMap[s.code] ?? 'A';
+            final pts = gradeScale[gr] ?? 4.0;
+            totalPoints += (cr * pts);
+            totalCredits += cr;
+          }
+          final currentSgpa = totalCredits > 0 ? (totalPoints / totalCredits) : 0.0;
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'SGPA Calculator',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.royalBlue,
+                            ),
+                          ),
+                          Text(
+                            semester.title,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00357F), Color(0xFF004AAD)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.royalBlue.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'CALCULATED SGPA',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFD9E2FF),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${currentSgpa.toStringAsFixed(2)} / 4.00',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$totalCredits Credits',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Course Grades & Credit Hours',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...semesterSubjects.map((sub) {
+                    final credits = creditMap[sub.code] ?? 3;
+                    final grade = gradeMap[sub.code] ?? 'A';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF272730)
+                            : AppColors.surfaceContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sub.code,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.royalBlue,
+                                  ),
+                                ),
+                                Text(
+                                  sub.name,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          DropdownButton<int>(
+                            value: credits,
+                            underline: const SizedBox(),
+                            items: [1, 2, 3, 4, 5]
+                                .map((c) => DropdownMenuItem(value: c, child: Text('$c Cr')))
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setSheetState(() => creditMap[sub.code] = val);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          DropdownButton<String>(
+                            value: grade,
+                            underline: const SizedBox(),
+                            items: gradeScale.keys
+                                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setSheetState(() => gradeMap[sub.code] = val);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        for (final s in semesterSubjects) {
+                          final updatedSub = s.copyWith(
+                            creditHours: creditMap[s.code] ?? 3,
+                            grade: gradeMap[s.code] ?? 'A',
+                          );
+                          await StorageService.instance.updateSubject(updatedSub);
+                        }
+                        await StorageService.instance.saveSemesterSgpa(semester.id, currentSgpa);
+
+                        if (mounted) {
+                          Navigator.pop(context);
+                          _loadData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${semester.title} SGPA: ${currentSgpa.toStringAsFixed(2)} saved!',
+                              ),
+                              backgroundColor: AppColors.royalBlue,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.save),
+                      label: const Text('Save SGPA to Semester'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.royalBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showEditProfileDialog() {
     final nameCtrl = TextEditingController(text: _userName);
     final majorCtrl = TextEditingController(text: _userMajor);
@@ -1039,10 +1337,10 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surfaceLowest,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: sem.isCurrent ? AppColors.lightBlue : AppColors.outlineVariant,
+            color: sem.isCurrent ? AppColors.lightBlue : AppColors.border(context),
             width: sem.isCurrent ? 1.5 : 1.0,
           ),
           boxShadow: const [
@@ -1104,9 +1402,21 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
                       _showEditSemesterDialog(sem);
                     } else if (value == 'delete') {
                       _showDeleteSemesterConfirm(sem);
+                    } else if (value == 'sgpa') {
+                      _showSgpaCalculator(sem);
                     }
                   },
                   itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'sgpa',
+                      child: Row(
+                        children: [
+                          Icon(Icons.calculate_outlined, color: AppColors.warmGold, size: 18),
+                          SizedBox(width: 8),
+                          Text('Calculate SGPA'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'edit',
                       child: Row(
@@ -1139,7 +1449,34 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
                   backgroundColor: AppColors.surfaceContainer,
                   visualDensity: VisualDensity.compact,
                 ),
-                const SizedBox(width: 8),
+                if (sem.sgpa != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.warmGold.withOpacity(0.14),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.warmGold.withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.stars_rounded, size: 13, color: AppColors.warmGold),
+                        const SizedBox(width: 4),
+                        Text(
+                          'SGPA: ${sem.sgpa!.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.warmGold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const Spacer(),
                 const Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.royalBlue),
               ],
             ),

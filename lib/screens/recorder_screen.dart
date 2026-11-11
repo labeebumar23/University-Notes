@@ -94,7 +94,12 @@ class _RecorderScreenState extends State<RecorderScreen>
       _recordedFilePath = '${lecturesDir.path}/$fileName';
 
       await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc),
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 48000, // 48 kbps highly compressed speech audio to save local storage
+          sampleRate: 32000, // 32 kHz optimized for speech clarity
+          numChannels: 1, // Mono channel saves 50% storage on voice lectures
+        ),
         path: _recordedFilePath!,
       );
 
@@ -533,11 +538,12 @@ class _RecorderScreenState extends State<RecorderScreen>
           ),
           const SizedBox(height: 6),
           const Text(
-            'High Fidelity AAC-LC Audio',
+            'Speech-Optimized 48 kbps AAC Mono • Low Storage Usage',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 12,
-              color: AppColors.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+              color: AppColors.royalBlue,
             ),
           ),
           const SizedBox(height: 28),

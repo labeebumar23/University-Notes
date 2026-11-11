@@ -484,4 +484,93 @@ class StorageService {
     final prefs = await _getPrefs();
     await prefs.clear();
   }
+
+  // ================= THEME PERSISTENCE =================
+  static const String _keyThemeMode = 'app_theme_mode';
+
+  Future<ThemeMode> getThemeMode() async {
+    final prefs = await _getPrefs();
+    final modeStr = prefs.getString(_keyThemeMode);
+    if (modeStr == 'dark') return ThemeMode.dark;
+    return ThemeMode.light;
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final prefs = await _getPrefs();
+    await prefs.setString(_keyThemeMode, mode == ThemeMode.dark ? 'dark' : 'light');
+  }
+
+  // ================= QUICK NOTES =================
+  static const String _prefixQuickNotes = 'quick_notes_';
+
+  Future<String> getQuickNotes(String subjectCode) async {
+    final prefs = await _getPrefs();
+    final notes = prefs.getString('$_prefixQuickNotes${subjectCode.toUpperCase()}');
+    if (notes != null && notes.isNotEmpty) return notes;
+    final subjects = await getSubjects();
+    for (final s in subjects) {
+      if (s.code.toUpperCase() == subjectCode.toUpperCase()) {
+        return s.quickNotes;
+      }
+    }
+    return '';
+  }
+
+  Future<void> saveQuickNotes(String subjectCode, String notes) async {
+    final prefs = await _getPrefs();
+    await prefs.setString('$_prefixQuickNotes${subjectCode.toUpperCase()}', notes);
+
+    final subjects = await getSubjects();
+    final updated = subjects.map((s) {
+      if (s.code.toUpperCase() == subjectCode.toUpperCase()) {
+        return s.copyWith(quickNotes: notes);
+      }
+      return s;
+    }).toList();
+    await saveSubjects(updated);
+  }
+
+  // ================= ATTENDANCE TRACKER =================
+  Future<void> updateAttendance(String subjectCode, int attended, int total) async {
+    final subjects = await getSubjects();
+    final updated = subjects.map((s) {
+      if (s.code.toUpperCase() == subjectCode.toUpperCase()) {
+        return s.copyWith(
+          classesAttended: attended < 0 ? 0 : attended,
+          totalClasses: total < 0 ? 0 : total,
+        );
+      }
+      return s;
+    }).toList();
+    await saveSubjects(updated);
+  }
+
+  // ================= SGPA CALCULATOR =================
+  Future<void> saveSemesterSgpa(String semesterId, double sgpa) async {
+    final semesters = await getSemesters();
+    final updated = semesters.map((sem) {
+      if (sem.id == semesterId) {
+        return sem.copyWith(
+          sgpa: sgpa,
+          gpa: sgpa.toStringAsFixed(2),
+        );
+      }
+      return sem;
+    }).toList();
+    await saveSemesters(updated);
+  }
+
+  /// Cleans only temporary cache files, keeping offline PDFs and audio recordings intact.
+  Future<void> clearCacheOnly() async {
+    try {
+      final cacheDir = await getTemporaryDirectory();
+      if (cacheDir.existsSync()) {
+        for (final item in cacheDir.listSync()) {
+          try {
+            item.deleteSync(recursive: true);
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
 }

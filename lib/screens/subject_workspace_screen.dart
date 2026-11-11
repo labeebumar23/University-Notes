@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/models.dart';
 import '../services/drive_service.dart';
 import '../services/storage_service.dart';
@@ -26,11 +27,16 @@ class SubjectWorkspaceScreen extends StatefulWidget {
 }
 
 class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
-  int _activeTabIndex = 0; // 0: Audio Lectures, 1: PDF Notes
+  int _activeTabIndex = 0; // 0: Audio Lectures, 1: PDF Notes, 2: Quick Notes
   List<PdfItemData> _pdfs = [];
   bool _isLoadingPdfs = true;
   List<LectureItemData> _lectures = [];
   bool _isLoadingLectures = true;
+
+  // Quick Notes & Code Snippets
+  final TextEditingController _quickNotesController = TextEditingController();
+  bool _isPreviewMarkdown = false;
+  bool _isSavingNotes = false;
 
   // In-App Audio Player
   late final AudioPlayer _audioPlayer;
@@ -96,6 +102,29 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
     final code = _currentSubject?.code ?? 'General';
     await _loadPdfs(code);
     await _loadLectures(code);
+    await _loadQuickNotes(code);
+  }
+
+  Future<void> _loadQuickNotes(String subjectCode) async {
+    final notes = await StorageService.instance.getQuickNotes(subjectCode);
+    if (mounted) {
+      _quickNotesController.text = notes;
+    }
+  }
+
+  Future<void> _saveQuickNotes(String subjectCode) async {
+    setState(() => _isSavingNotes = true);
+    await StorageService.instance.saveQuickNotes(subjectCode, _quickNotesController.text);
+    if (mounted) {
+      setState(() => _isSavingNotes = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Quick Notes saved locally!'),
+          backgroundColor: AppColors.royalBlue,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   Future<void> _loadPdfs(String subjectCode) async {
@@ -120,6 +149,7 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
 
   @override
   void dispose() {
+    _quickNotesController.dispose();
     _audioPlayer.stop();
     _audioPlayer.dispose();
     super.dispose();
@@ -611,14 +641,18 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
               const SizedBox(height: 16),
 
               // Action Launch Banner
-              _buildActionLaunchBanner(subCode),
-              const SizedBox(height: 18),
+              if (_activeTabIndex != 2) ...[
+                _buildActionLaunchBanner(subCode),
+                const SizedBox(height: 18),
+              ],
 
               // Active Tab Content
               if (_activeTabIndex == 0)
                 _buildAudioLecturesSection(subCode, _lectures)
+              else if (_activeTabIndex == 1)
+                _buildPdfNotesSection(subCode, _pdfs)
               else
-                _buildPdfNotesSection(subCode, _pdfs),
+                _buildQuickNotesSection(subCode),
             ],
           ),
 
@@ -793,17 +827,17 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
                   children: [
                     Icon(
                       Icons.graphic_eq,
-                      size: 18,
+                      size: 16,
                       color: _activeTabIndex == 0
                           ? AppColors.royalBlue
                           : AppColors.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
-                      'Audio Lectures',
+                      'Audio',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: _activeTabIndex == 0
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -812,9 +846,9 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
                             : AppColors.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: _activeTabIndex == 0
                             ? AppColors.primaryFixed
@@ -838,7 +872,7 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 3),
 
           // PDF Notes Tab
           Expanded(
@@ -867,17 +901,17 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
                   children: [
                     Icon(
                       Icons.description_outlined,
-                      size: 18,
+                      size: 16,
                       color: _activeTabIndex == 1
                           ? AppColors.royalBlue
                           : AppColors.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
-                      'PDF Notes',
+                      'PDFs',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: _activeTabIndex == 1
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -886,9 +920,9 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
                             : AppColors.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: _activeTabIndex == 1
                             ? AppColors.primaryFixed
@@ -912,9 +946,354 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
               ),
             ),
           ),
+          const SizedBox(width: 3),
+
+          // Quick Notes & Code Tab
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _activeTabIndex = 2),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: _activeTabIndex == 2
+                      ? AppColors.surfaceLowest
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: _activeTabIndex == 2
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x0C000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.code_outlined,
+                      size: 16,
+                      color: _activeTabIndex == 2
+                          ? AppColors.royalBlue
+                          : AppColors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Notes',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: _activeTabIndex == 2
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: _activeTabIndex == 2
+                            ? AppColors.royalBlue
+                            : AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: _activeTabIndex == 2
+                            ? const Color(0xFFFEF3C7)
+                            : AppColors.surfaceHigh,
+                        borderRadius: BorderRadius.circular(9999),
+                      ),
+                      child: Text(
+                        'MD',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: _activeTabIndex == 2
+                              ? const Color(0xFFB45309)
+                              : AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  void _insertMarkdownSnippet(String prefix, [String suffix = '']) {
+    final text = _quickNotesController.text;
+    final selection = _quickNotesController.selection;
+    final start = selection.start >= 0 ? selection.start : text.length;
+    final end = selection.end >= 0 ? selection.end : text.length;
+    final selectedText = text.substring(start, end);
+    final replacement = '$prefix$selectedText$suffix';
+    final newText = text.replaceRange(start, end, replacement);
+    _quickNotesController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: start + prefix.length + selectedText.length + suffix.length,
+      ),
+    );
+  }
+
+  Widget _buildSnippetButton(String label, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF334155),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickNotesSection(String subjectCode) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header & Toolbar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.note_alt_outlined, size: 18, color: AppColors.royalBlue),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Quick Notes & Code ($subjectCode)',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => setState(() => _isPreviewMarkdown = !_isPreviewMarkdown),
+                        icon: Icon(
+                          _isPreviewMarkdown ? Icons.edit_outlined : Icons.visibility_outlined,
+                          size: 16,
+                          color: AppColors.royalBlue,
+                        ),
+                        label: Text(
+                          _isPreviewMarkdown ? 'Edit' : 'Preview',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.royalBlue),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      ElevatedButton.icon(
+                        onPressed: _isSavingNotes ? null : () => _saveQuickNotes(subjectCode),
+                        icon: _isSavingNotes
+                            ? const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.save_outlined, size: 16),
+                        label: Text(_isSavingNotes ? 'Saving...' : 'Save', style: const TextStyle(fontSize: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.royalBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              if (!_isPreviewMarkdown) ...[
+                const SizedBox(height: 10),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildSnippetButton('H1', () => _insertMarkdownSnippet('# ')),
+                      _buildSnippetButton('H2', () => _insertMarkdownSnippet('## ')),
+                      _buildSnippetButton('Bold', () => _insertMarkdownSnippet('**', '**')),
+                      _buildSnippetButton('Italic', () => _insertMarkdownSnippet('*', '*')),
+                      _buildSnippetButton('Code', () => _insertMarkdownSnippet('`', '`')),
+                      _buildSnippetButton('Code Block', () => _insertMarkdownSnippet('```dart\n// Your code here\n', '\n```\n')),
+                      _buildSnippetButton('List', () => _insertMarkdownSnippet('- ')),
+                      _buildSnippetButton('Quote', () => _insertMarkdownSnippet('> ')),
+                      _buildSnippetButton('Formula', () => _insertMarkdownSnippet(r'$$ ', r' $$')),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Editor or Markdown Preview
+        if (_isPreviewMarkdown)
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 280),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor),
+            ),
+            child: _quickNotesController.text.trim().isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.edit_note, size: 48, color: isDark ? Colors.grey[600] : Colors.grey[400]),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No notes written yet.',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap "Edit" to type Markdown notes or code snippets.',
+                          style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[500] : Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  )
+                : MarkdownBody(
+                    data: _quickNotesController.text,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                      p: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+                        height: 1.5,
+                      ),
+                      code: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+                        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFEFF6FF),
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: borderColor),
+                      ),
+                    ),
+                  ),
+          )
+        else
+          Container(
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor),
+            ),
+            child: TextField(
+              controller: _quickNotesController,
+              maxLines: null,
+              minLines: 12,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+                height: 1.45,
+              ),
+              decoration: InputDecoration(
+                hintText: '# $subjectCode Lecture Notes\n\n- Key Concept 1\n- Formula: V = I * R\n\n```python\ndef calculate_resistance(voltage, current):\n    return voltage / current\n```',
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.grey[600] : Colors.grey[400],
+                  fontSize: 13,
+                ),
+                contentPadding: const EdgeInsets.all(16),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.lock_outline, size: 14, color: Color(0xFF16A34A)),
+                const SizedBox(width: 4),
+                Text(
+                  '100% Offline Local Storage',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF86EFAC) : const Color(0xFF16A34A),
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              '${_quickNotesController.text.length} chars',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
   }
 
   Widget _buildActionLaunchBanner(String subjectCode) {

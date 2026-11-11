@@ -9,14 +9,19 @@ import 'screens/subject_workspace_screen.dart';
 import 'screens/recorder_screen.dart';
 import 'screens/settings_screen.dart';
 
-void main() {
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final savedTheme = await StorageService.instance.getThemeMode();
+  themeModeNotifier.value = savedTheme;
+
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
+    SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Color(0xFFFAFAEF),
-      systemNavigationBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: savedTheme == ThemeMode.dark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: savedTheme == ThemeMode.dark ? const Color(0xFF121212) : const Color(0xFFFAFAEF),
+      systemNavigationBarIconBrightness: savedTheme == ThemeMode.dark ? Brightness.light : Brightness.dark,
     ),
   );
   runApp(const UniNotesApp());
@@ -27,18 +32,25 @@ class UniNotesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'UniNotes',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const _AppRootLauncher(),
-      routes: {
-        '/onboarding': (context) => const OnboardingScreen(),
-        '/home': (context) => const HomeSemestersScreen(),
-        '/subjects': (context) => const SemesterSubjectsScreen(),
-        '/workspace': (context) => const SubjectWorkspaceScreen(),
-        '/recorder': (context) => const RecorderScreen(),
-        '/settings': (context) => const SettingsScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, currentMode, _) {
+        return MaterialApp(
+          title: 'UniNotes',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: currentMode,
+          home: const _AppRootLauncher(),
+          routes: {
+            '/onboarding': (context) => const OnboardingScreen(),
+            '/home': (context) => const HomeSemestersScreen(),
+            '/subjects': (context) => const SemesterSubjectsScreen(),
+            '/workspace': (context) => const SubjectWorkspaceScreen(),
+            '/recorder': (context) => const RecorderScreen(),
+            '/settings': (context) => const SettingsScreen(),
+          },
+        );
       },
     );
   }
@@ -74,9 +86,9 @@ class _AppRootLauncherState extends State<_AppRootLauncher> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFFAFAEF),
-        body: Center(
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF004AAD)),
           ),

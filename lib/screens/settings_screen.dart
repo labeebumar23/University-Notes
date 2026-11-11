@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../main.dart';
 import '../services/drive_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_colors.dart';
@@ -19,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _userName = 'Student';
   String _userMajor = 'Computer Science B.S.';
   bool _isLoading = true;
+  bool _isDarkMode = false;
 
   int _pdfBytes = 0;
   int _lectureBytes = 0;
@@ -34,16 +36,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final name = await StorageService.instance.getUserName() ?? 'Student';
     final major = await StorageService.instance.getUserMajor() ?? 'Computer Science B.S.';
     final usage = await StorageService.instance.getStorageUsageBytes();
+    final theme = await StorageService.instance.getThemeMode();
 
     if (mounted) {
       setState(() {
         _userName = name;
         _userMajor = major;
+        _isDarkMode = theme == ThemeMode.dark;
         _pdfBytes = usage['pdfs'] ?? 0;
         _lectureBytes = usage['lectures'] ?? 0;
         _totalBytes = usage['total'] ?? 0;
         _isLoading = false;
       });
+    }
+  }
+
+  void _toggleDarkMode(bool value) async {
+    setState(() {
+      _isDarkMode = value;
+    });
+    themeModeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+    await StorageService.instance.setThemeMode(themeModeNotifier.value);
+  }
+
+  Future<void> _cleanCache() async {
+    await StorageService.instance.clearCacheOnly();
+    await _loadSettings();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Temporary cache cleared! Offline PDFs & Audio preserved.'),
+          backgroundColor: AppColors.royalBlue,
+        ),
+      );
     }
   }
 
@@ -226,15 +251,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildProfileCard(),
                 const SizedBox(height: 18),
 
-                // 2. Storage Usage Card
+                // 2. True Dark Mode & Theme Appearance Card
+                _buildAppearanceCard(),
+                const SizedBox(height: 18),
+
+                // 3. Storage Manager & Optimizer Card
                 _buildStorageCard(),
                 const SizedBox(height: 18),
 
-                // 3. Cloud & Offline Info
+                // 4. Cloud & Offline Info
                 _buildOfflineInfoCard(),
                 const SizedBox(height: 18),
 
-                // 4. Danger Zone (Factory Reset)
+                // 5. Danger Zone (Factory Reset)
                 _buildDangerZoneCard(),
                 const SizedBox(height: 24),
 
@@ -263,9 +292,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildProfileCard() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceLowest,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: AppColors.border(context)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x061E293B),
@@ -351,12 +380,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildStorageCard() {
+  Widget _buildAppearanceCard() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceLowest,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: AppColors.border(context)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x061E293B),
@@ -373,7 +402,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'STORAGE USAGE',
+                'APPEARANCE & THEME',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.royalBlue,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _isDarkMode
+                      ? const Color(0xFF1E293B)
+                      : AppColors.primaryFixed,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _isDarkMode ? 'Dark Mode' : 'Light Mode',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: _isDarkMode ? const Color(0xFF60A5FA) : AppColors.royalBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: _isDarkMode
+                      ? const Color(0xFF272730)
+                      : AppColors.primaryFixed,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  color: _isDarkMode ? AppColors.warmGold : AppColors.royalBlue,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'True Dark Mode',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Deep grey/black scholastic canvas with Royal Blue & Warm Gold accents',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _isDarkMode,
+                onChanged: _toggleDarkMode,
+                activeColor: AppColors.royalBlue,
+                activeTrackColor: AppColors.lightBlue,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStorageCard() {
+    final pdfPct = _totalBytes > 0 ? ((_pdfBytes / _totalBytes) * 100).toInt() : 0;
+    final lecturePct = _totalBytes > 0 ? ((_lectureBytes / _totalBytes) * 100).toInt() : 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(context)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x061E293B),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'STORAGE MANAGER & OPTIMIZER',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 11,
@@ -395,20 +535,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 _formatBytes(_totalBytes),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.onSurface,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'total on-device storage used',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
-                  color: AppColors.onSurfaceVariant,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -418,9 +558,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: _totalBytes > 0 ? (_pdfBytes / _totalBytes).clamp(0.05, 0.95) : 0.0,
-              minHeight: 8,
-              backgroundColor: AppColors.tertiaryFixed,
+              value: _totalBytes > 0 ? (_pdfBytes / _totalBytes).clamp(0.02, 0.98) : 0.0,
+              minHeight: 10,
+              backgroundColor: AppColors.warmGold,
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.royalBlue),
             ),
           ),
@@ -430,17 +570,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.royalBlue, shape: BoxShape.circle)),
               const SizedBox(width: 6),
               Text(
-                'PDF Notes: ${_formatBytes(_pdfBytes)}',
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.onSurface),
+                'PDF Notes: ${_formatBytes(_pdfBytes)} ($pdfPct%)',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
               ),
               const Spacer(),
-              Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.tertiaryFixed, shape: BoxShape.circle)),
+              Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.warmGold, shape: BoxShape.circle)),
               const SizedBox(width: 6),
               Text(
-                'Audio Lectures: ${_formatBytes(_lectureBytes)}',
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.onSurface),
+                'Audio: ${_formatBytes(_lectureBytes)} ($lecturePct%)',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
               ),
             ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(),
+          const SizedBox(height: 10),
+          // Storage compression status
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.royalBlue.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.bolt, size: 16, color: AppColors.royalBlue),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Audio Compression: 48 kbps AAC Mono active (saves ~70% space per class)',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _cleanCache,
+              icon: const Icon(Icons.cleaning_services_outlined, size: 16),
+              label: const Text('Clean Temporary Cache (Keep Saved PDFs & Audio)'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.royalBlue,
+                visualDensity: VisualDensity.compact,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -450,9 +634,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildOfflineInfoCard() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceLowest,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: AppColors.border(context)),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
