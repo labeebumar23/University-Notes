@@ -1294,7 +1294,6 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
       ],
     );
   }
-  }
 
   Widget _buildActionLaunchBanner(String subjectCode) {
     return Row(
