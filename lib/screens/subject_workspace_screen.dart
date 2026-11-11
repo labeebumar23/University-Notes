@@ -246,9 +246,17 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
         int addedCount = 0;
         for (final file in files) {
           final fileName = file.name;
-          final fileSizeInBytes = file.size;
-          final sizeString = _formatFileSize(fileSizeInBytes);
           final filePath = file.path;
+          int fileSizeInBytes = file.lengthSync() ?? (await file.length()) ?? 0;
+          if (fileSizeInBytes <= 0 && filePath != null) {
+            try {
+              final ioFile = File(filePath);
+              if (ioFile.existsSync()) {
+                fileSizeInBytes = ioFile.lengthSync();
+              }
+            } catch (_) {}
+          }
+          final sizeString = _formatFileSize(fileSizeInBytes);
 
           final newPdf = PdfItemData(
             title: fileName,
