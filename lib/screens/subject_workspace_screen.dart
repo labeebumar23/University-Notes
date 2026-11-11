@@ -278,7 +278,7 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen>
             SnackBar(
               content: Text(
                 addedCount == 1
-                    ? 'Uploaded "${result.files.first.name}" to $subjectCode!'
+                    ? 'Uploaded "${files.first.name}" to $subjectCode!'
                     : 'Successfully uploaded $addedCount PDFs to $subjectCode!',
               ),
               backgroundColor: AppColors.royalBlue,
