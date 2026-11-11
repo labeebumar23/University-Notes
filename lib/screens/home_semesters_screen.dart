@@ -9,6 +9,7 @@ import 'onboarding_screen.dart';
 import 'semester_subjects_screen.dart';
 import 'subject_workspace_screen.dart';
 import 'recorder_screen.dart';
+import 'settings_screen.dart';
 
 class HomeSemestersScreen extends StatefulWidget {
   const HomeSemestersScreen({super.key});
@@ -78,7 +79,11 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
     } else if (index == 2) {
       _navigateToFirstWorkspace();
     } else if (index == 3) {
-      _showSettingsSheet();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const SettingsScreen(),
+        ),
+      ).then((_) => _loadData());
     }
   }
 
@@ -211,6 +216,118 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditSemesterDialog(SemesterData semester) {
+    final titleController = TextEditingController(text: semester.title);
+    final termController = TextEditingController(text: semester.term);
+    String currentStatus = semester.status;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Edit Semester',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Semester Title',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: termController,
+                decoration: const InputDecoration(
+                  labelText: 'Academic Term / Year',
+                ),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: ['Active', 'In Progress', 'Completed', 'Upcoming'].contains(currentStatus)
+                    ? currentStatus
+                    : 'Active',
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: ['Active', 'In Progress', 'Completed', 'Upcoming']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setSheetState(() => currentStatus = val);
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final updated = semester.copyWith(
+                      title: titleController.text.trim().isEmpty
+                          ? semester.title
+                          : titleController.text.trim(),
+                      term: termController.text.trim().isEmpty
+                          ? semester.term
+                          : termController.text.trim(),
+                      status: currentStatus,
+                    );
+                    await StorageService.instance.updateSemester(updated);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      _loadData();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${updated.title} updated!'),
+                          backgroundColor: AppColors.royalBlue,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.check),
+                  label: const Text('Save Changes'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.royalBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -972,11 +1089,23 @@ class _HomeSemestersScreenState extends State<HomeSemestersScreen> {
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20, color: AppColors.onSurfaceVariant),
                   onSelected: (value) {
-                    if (value == 'delete') {
+                    if (value == 'edit') {
+                      _showEditSemesterDialog(sem);
+                    } else if (value == 'delete') {
                       _showDeleteSemesterConfirm(sem);
                     }
                   },
                   itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, color: AppColors.royalBlue, size: 18),
+                          SizedBox(width: 8),
+                          Text('Edit Semester'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'delete',
                       child: Row(

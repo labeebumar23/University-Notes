@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/models.dart';
 
 class StorageService {
@@ -23,39 +24,41 @@ class StorageService {
 
   // ================= USER PROFILE & ONBOARDING =================
 
-  /// Retrieves the saved user's name. Returns null if not onboarded.
   Future<String?> getUserName() async {
     final prefs = await _getPrefs();
     return prefs.getString(_keyUserName);
   }
 
-  /// Sets the user's name upon onboarding or profile update.
   Future<void> setUserName(String name) async {
     final prefs = await _getPrefs();
     await prefs.setString(_keyUserName, name.trim());
   }
 
-  /// Retrieves the user's major/degree (e.g. 'Computer Science B.S.').
   Future<String?> getUserMajor() async {
     final prefs = await _getPrefs();
     return prefs.getString(_keyUserMajor) ?? 'Computer Science B.S.';
   }
 
-  /// Sets the user's major/degree.
   Future<void> setUserMajor(String major) async {
     final prefs = await _getPrefs();
     await prefs.setString(_keyUserMajor, major.trim());
   }
 
-  /// Checks if the user has completed onboarding.
   Future<bool> isOnboarded() async {
     final name = await getUserName();
     return name != null && name.isNotEmpty;
   }
 
-  // ================= SEMESTERS =================
+  // ================= SEMESTERS CRUD =================
 
-  /// Retrieves all semesters. Starts 100% empty with no dummy data.
+  /// C - Create Semester
+  Future<void> addSemester(SemesterData semester) async {
+    final list = await getSemesters();
+    list.add(semester);
+    await saveSemesters(list);
+  }
+
+  /// R - Read Semesters (Starts 100% empty)
   Future<List<SemesterData>> getSemesters() async {
     final prefs = await _getPrefs();
     final rawString = prefs.getString(_keySemesters);
@@ -74,27 +77,30 @@ class StorageService {
     }
   }
 
-  /// Persists the list of semesters to local storage.
+  /// Persists semesters list
   Future<void> saveSemesters(List<SemesterData> semesters) async {
     final prefs = await _getPrefs();
     final encoded = jsonEncode(semesters.map((s) => s.toJson()).toList());
     await prefs.setString(_keySemesters, encoded);
   }
 
-  /// Appends a new semester and saves permanently.
-  Future<void> addSemester(SemesterData semester) async {
+  /// U - Update Semester
+  Future<void> updateSemester(SemesterData updatedSemester) async {
     final list = await getSemesters();
-    list.add(semester);
-    await saveSemesters(list);
+    final index = list.indexWhere((s) => s.id == updatedSemester.id);
+    if (index != -1) {
+      list[index] = updatedSemester;
+      await saveSemesters(list);
+    }
   }
 
-  /// Deletes a semester and all associated subjects/files.
+  /// D - Delete Semester and all nested subjects/files
   Future<void> deleteSemester(String semesterId) async {
     final list = await getSemesters();
     list.removeWhere((s) => s.id == semesterId);
     await saveSemesters(list);
 
-    // Also delete associated subjects
+    // Cascade delete associated subjects and files
     final subjects = await getSubjects();
     final toRemove = subjects.where((s) => s.semesterId == semesterId).toList();
     for (final sub in toRemove) {
@@ -102,10 +108,35 @@ class StorageService {
     }
   }
 
-  // ================= SUBJECTS =================
+  // ================= SUBJECTS / COURSES CRUD =================
 
-  /// Retrieves subjects for a semester (or all subjects).
-  /// Starts 100% empty with no pre-seeded mock data.
+  /// C - Create Subject
+  Future<void> addSubject(SubjectData subject) async {
+    final list = await getSubjects();
+    list.add(subject);
+    await saveSubjects(list);
+
+    // Update parent semester preview and count
+    final semesters = await getSemesters();
+    final updatedSemesters = semesters.map((sem) {
+      if (sem.id == subject.semesterId) {
+        final subCount = list.where((s) => s.semesterId == sem.id).length;
+        final previewNames = list
+            .where((s) => s.semesterId == sem.id)
+            .map((s) => '${s.code} ${s.name}')
+            .take(3)
+            .toList();
+        return sem.copyWith(
+          subjectCount: subCount,
+          subjectsPreview: previewNames,
+        );
+      }
+      return sem;
+    }).toList();
+    await saveSemesters(updatedSemesters);
+  }
+
+  /// R - Read Subjects for a semester (or all)
   Future<List<SubjectData>> getSubjects({String? semesterId}) async {
     final prefs = await _getPrefs();
     final rawString = prefs.getString(_keySubjects);
@@ -128,41 +159,65 @@ class StorageService {
     return allSubjects;
   }
 
-  /// Persists subjects list to local storage.
+  /// Persists subjects list
   Future<void> saveSubjects(List<SubjectData> subjects) async {
     final prefs = await _getPrefs();
     final encoded = jsonEncode(subjects.map((s) => s.toJson()).toList());
     await prefs.setString(_keySubjects, encoded);
   }
 
-  /// Adds a new subject to permanent storage and updates semester subject count.
-  Future<void> addSubject(SubjectData subject) async {
+  /// U - Update Subject
+  Future<void> updateSubject(SubjectData updatedSubject) async {
     final list = await getSubjects();
-    list.add(subject);
-    await saveSubjects(list);
+    final index = list.indexWhere((s) => s.code.toUpperCase() == updatedSubject.code.toUpperCase());
+    if (index != -1) {
+      list[index] = updatedSubject;
+      await saveSubjects(list);
 
-    // Update semester subject count
-    final semesters = await getSemesters();
-    final updatedSemesters = semesters.map((sem) {
-      if (sem.id == subject.semesterId) {
-        final subCount = list.where((s) => s.semesterId == sem.id).length;
-        final previewNames = list
-            .where((s) => s.semesterId == sem.id)
-            .map((s) => '${s.code} ${s.name}')
-            .take(3)
-            .toList();
-        return sem.copyWith(
-          subjectCount: subCount,
-          subjectsPreview: previewNames,
-        );
-      }
-      return sem;
-    }).toList();
-    await saveSemesters(updatedSemesters);
+      // Refresh semester preview
+      final semId = updatedSubject.semesterId;
+      final remainingForSem = list.where((s) => s.semesterId == semId).toList();
+      final semesters = await getSemesters();
+      final updatedSemesters = semesters.map((sem) {
+        if (sem.id == semId) {
+          return sem.copyWith(
+            subjectCount: remainingForSem.length,
+            subjectsPreview: remainingForSem
+                .map((s) => '${s.code} ${s.name}')
+                .take(3)
+                .toList(),
+          );
+        }
+        return sem;
+      }).toList();
+      await saveSemesters(updatedSemesters);
+    }
   }
 
-  /// Deletes a subject and its PDFs/Lectures.
+  /// D - Delete Subject, along with all its PDFs and audio files on disk
   Future<void> deleteSubject(String subjectCode) async {
+    // Delete all physical PDFs for this subject
+    final pdfs = await getPdfsForSubject(subjectCode);
+    for (final p in pdfs) {
+      if (p.filePath != null && p.filePath!.isNotEmpty) {
+        try {
+          final f = File(p.filePath!);
+          if (f.existsSync()) f.deleteSync();
+        } catch (_) {}
+      }
+    }
+
+    // Delete all physical Audio Lectures for this subject
+    final lectures = await getLecturesForSubject(subjectCode);
+    for (final l in lectures) {
+      if (l.audioFilePath != null && l.audioFilePath!.isNotEmpty) {
+        try {
+          final f = File(l.audioFilePath!);
+          if (f.existsSync()) f.deleteSync();
+        } catch (_) {}
+      }
+    }
+
     final list = await getSubjects();
     SubjectData? removedSubject;
     list.removeWhere((s) {
@@ -194,7 +249,6 @@ class StorageService {
       await saveSemesters(updatedSemesters);
     }
 
-    // Clean up PDFs and Lectures for this subject
     final prefs = await _getPrefs();
     await prefs.remove('$_keyPdfsPrefix$subjectCode');
     await prefs.remove('$_keyLecturesPrefix$subjectCode');
@@ -202,7 +256,6 @@ class StorageService {
 
   // ================= PDF NOTES =================
 
-  /// Retrieves all PDFs for a specific subject. Starts 100% empty.
   Future<List<PdfItemData>> getPdfsForSubject(String subjectCode) async {
     final prefs = await _getPrefs();
     final key = '$_keyPdfsPrefix$subjectCode';
@@ -230,13 +283,11 @@ class StorageService {
     await prefs.setString(key, encoded);
   }
 
-  /// Adds a newly picked PDF to the subject and updates subject's pdfCount.
   Future<void> addPdfToSubject(String subjectCode, PdfItemData pdf) async {
     final pdfs = await getPdfsForSubject(subjectCode);
     pdfs.insert(0, pdf);
     await _savePdfsForSubject(subjectCode, pdfs);
 
-    // Update subject's pdfCount
     final subjects = await getSubjects();
     final updatedSubjects = subjects.map((s) {
       if (s.code.toUpperCase() == subjectCode.toUpperCase()) {
@@ -247,7 +298,6 @@ class StorageService {
     await saveSubjects(updatedSubjects);
   }
 
-  /// Updates an existing PDF in the subject (e.g. cloud backup status).
   Future<void> updatePdfInSubject(
       String subjectCode, PdfItemData updatedPdf) async {
     final pdfs = await getPdfsForSubject(subjectCode);
@@ -260,13 +310,21 @@ class StorageService {
     await _savePdfsForSubject(subjectCode, pdfs);
   }
 
-  /// Deletes a PDF from the subject.
   Future<void> deletePdfFromSubject(String subjectCode, String title) async {
     final pdfs = await getPdfsForSubject(subjectCode);
+    final toDelete = pdfs.where((p) => p.title == title).toList();
+    for (final p in toDelete) {
+      if (p.filePath != null && p.filePath!.isNotEmpty) {
+        try {
+          final f = File(p.filePath!);
+          if (f.existsSync()) f.deleteSync();
+        } catch (_) {}
+      }
+    }
+
     pdfs.removeWhere((p) => p.title == title);
     await _savePdfsForSubject(subjectCode, pdfs);
 
-    // Update subject's pdfCount
     final subjects = await getSubjects();
     final updatedSubjects = subjects.map((s) {
       if (s.code.toUpperCase() == subjectCode.toUpperCase()) {
@@ -279,7 +337,6 @@ class StorageService {
 
   // ================= AUDIO LECTURES =================
 
-  /// Retrieves all Audio Lectures for a specific subject. Starts 100% empty.
   Future<List<LectureItemData>> getLecturesForSubject(String subjectCode) async {
     final prefs = await _getPrefs();
     final key = '$_keyLecturesPrefix$subjectCode';
@@ -307,14 +364,12 @@ class StorageService {
     await prefs.setString(key, encoded);
   }
 
-  /// Adds a new Audio Lecture and updates subject's aiNotesCount/recentStatus.
   Future<void> addLectureToSubject(
       String subjectCode, LectureItemData lecture) async {
     final lectures = await getLecturesForSubject(subjectCode);
     lectures.insert(0, lecture);
     await _saveLecturesForSubject(subjectCode, lectures);
 
-    // Update subject's lecture count
     final subjects = await getSubjects();
     final updatedSubjects = subjects.map((s) {
       if (s.code.toUpperCase() == subjectCode.toUpperCase()) {
@@ -328,7 +383,6 @@ class StorageService {
     await saveSubjects(updatedSubjects);
   }
 
-  /// Updates an existing Audio Lecture (e.g. backup status).
   Future<void> updateLectureInSubject(
       String subjectCode, LectureItemData updatedLecture) async {
     final lectures = await getLecturesForSubject(subjectCode);
@@ -341,7 +395,6 @@ class StorageService {
     await _saveLecturesForSubject(subjectCode, lectures);
   }
 
-  /// Deletes an Audio Lecture and its local audio file.
   Future<void> deleteLectureFromSubject(
       String subjectCode, String lectureId) async {
     final lectures = await getLecturesForSubject(subjectCode);
@@ -360,7 +413,6 @@ class StorageService {
     lectures.removeWhere((l) => l.id == lectureId);
     await _saveLecturesForSubject(subjectCode, lectures);
 
-    // Update subject's lecture count
     final subjects = await getSubjects();
     final updatedSubjects = subjects.map((s) {
       if (s.code.toUpperCase() == subjectCode.toUpperCase()) {
@@ -371,8 +423,56 @@ class StorageService {
     await saveSubjects(updatedSubjects);
   }
 
-  /// Clears all local application storage (for fresh resets).
+  // ================= STORAGE USAGE & FACTORY RESET =================
+
+  /// Calculates actual on-device disk space consumed by PDFs and Audio Recordings.
+  Future<Map<String, int>> getStorageUsageBytes() async {
+    int pdfBytes = 0;
+    int lectureBytes = 0;
+
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      
+      final pdfDir = Directory('${docDir.path}/pdfs');
+      if (pdfDir.existsSync()) {
+        for (final file in pdfDir.listSync(recursive: true)) {
+          if (file is File) {
+            pdfBytes += file.lengthSync();
+          }
+        }
+      }
+
+      final lecturesDir = Directory('${docDir.path}/lectures');
+      if (lecturesDir.existsSync()) {
+        for (final file in lecturesDir.listSync(recursive: true)) {
+          if (file is File) {
+            lectureBytes += file.lengthSync();
+          }
+        }
+      }
+    } catch (_) {}
+
+    return {
+      'pdfs': pdfBytes,
+      'lectures': lectureBytes,
+      'total': pdfBytes + lectureBytes,
+    };
+  }
+
+  /// Clears all local application storage and deletes all files on disk (Factory Reset).
   Future<void> clearAllData() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final pdfDir = Directory('${docDir.path}/pdfs');
+      if (pdfDir.existsSync()) {
+        pdfDir.deleteSync(recursive: true);
+      }
+      final lecturesDir = Directory('${docDir.path}/lectures');
+      if (lecturesDir.existsSync()) {
+        lecturesDir.deleteSync(recursive: true);
+      }
+    } catch (_) {}
+
     final prefs = await _getPrefs();
     await prefs.clear();
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/models.dart';
 import '../services/drive_service.dart';
 import '../services/storage_service.dart';
@@ -10,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'recorder_screen.dart';
+import 'settings_screen.dart';
 
 class SubjectWorkspaceScreen extends StatefulWidget {
   final SubjectData? subject;
@@ -182,8 +184,10 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
       // Already on workspace
       return;
     } else if (index == 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Workspace Settings')),
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const SettingsScreen(),
+        ),
       );
     }
   }
@@ -292,30 +296,41 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
 
       if (files.isNotEmpty) {
         int addedCount = 0;
+        final appDocDir = await getApplicationDocumentsDirectory();
+        final pdfsDir = Directory('${appDocDir.path}/pdfs');
+        if (!pdfsDir.existsSync()) {
+          await pdfsDir.create(recursive: true);
+        }
+
         for (final file in files) {
           final fileName = file.name;
-          final filePath = file.path;
-          int fileSizeInBytes = file.lengthSync() ?? (await file.length()) ?? 0;
-          if (fileSizeInBytes <= 0 && filePath != null) {
-            try {
-              final ioFile = File(filePath);
-              if (ioFile.existsSync()) {
-                fileSizeInBytes = ioFile.lengthSync();
-              }
-            } catch (_) {}
+          final sourcePath = file.path;
+          final safeName = '${DateTime.now().millisecondsSinceEpoch}_${fileName.replaceAll(RegExp(r'[^\w\s\.-]'), '_')}';
+          final internalDestinationPath = '${pdfsDir.path}/$safeName';
+
+          // Permanently copy PDF into the app's internal documents directory for 100% offline access
+          if (sourcePath != null && File(sourcePath).existsSync()) {
+            await File(sourcePath).copy(internalDestinationPath);
+          } else if (file.bytes != null) {
+            await File(internalDestinationPath).writeAsBytes(file.bytes!);
           }
+
+          final localFile = File(internalDestinationPath);
+          int fileSizeInBytes = localFile.existsSync()
+              ? localFile.lengthSync()
+              : (file.lengthSync() ?? (await file.length()) ?? 0);
           final sizeString = _formatFileSize(fileSizeInBytes);
 
           final newPdf = PdfItemData(
             title: fileName,
             size: sizeString,
             addedDate: 'Added today',
-            tag: 'Uploaded',
+            tag: 'Offline PDF',
             tagColor: AppColors.royalBlue,
             icon: Icons.picture_as_pdf,
             iconBg: AppColors.errorContainer,
             iconColor: AppColors.error,
-            filePath: filePath,
+            filePath: internalDestinationPath,
           );
 
           await StorageService.instance.addPdfToSubject(subjectCode, newPdf);
@@ -333,8 +348,8 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
             SnackBar(
               content: Text(
                 addedCount == 1
-                    ? 'Uploaded "${files.first.name}"!'
-                    : 'Uploaded $addedCount PDFs successfully!',
+                    ? 'Saved "${files.first.name}" offline!'
+                    : 'Saved $addedCount PDFs offline!',
               ),
               backgroundColor: AppColors.royalBlue,
             ),

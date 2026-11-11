@@ -7,6 +7,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/semester_subjects_screen.dart';
 import 'screens/subject_workspace_screen.dart';
 import 'screens/recorder_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,7 @@ class UniNotesApp extends StatelessWidget {
         '/subjects': (context) => const SemesterSubjectsScreen(),
         '/workspace': (context) => const SubjectWorkspaceScreen(),
         '/recorder': (context) => const RecorderScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }

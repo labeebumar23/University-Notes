@@ -6,6 +6,7 @@ import '../widgets/app_header.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'subject_workspace_screen.dart';
 import 'recorder_screen.dart';
+import 'settings_screen.dart';
 
 class SemesterSubjectsScreen extends StatefulWidget {
   final SemesterData? semester;
@@ -57,9 +58,11 @@ class _SemesterSubjectsScreenState extends State<SemesterSubjectsScreen> {
         _navigateToWorkspace(_subjects.first);
       }
     } else if (index == 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Semester Settings')),
-      );
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const SettingsScreen(),
+        ),
+      ).then((_) => _loadSubjects());
     }
   }
 
@@ -192,6 +195,105 @@ class _SemesterSubjectsScreenState extends State<SemesterSubjectsScreen> {
                 },
                 icon: const Icon(Icons.add),
                 label: const Text('Save Course'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditSubjectDialog(SubjectData sub) {
+    final codeController = TextEditingController(text: sub.code);
+    final nameController = TextEditingController(text: sub.name);
+    final profController = TextEditingController(text: sub.professor);
+    final scheduleController = TextEditingController(text: sub.schedule);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Edit Course',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: codeController,
+              decoration: const InputDecoration(labelText: 'Course Code'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Course Name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: profController,
+              decoration: const InputDecoration(labelText: 'Professor / Instructor'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: scheduleController,
+              decoration: const InputDecoration(labelText: 'Class Schedule'),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final updated = sub.copyWith(
+                    code: codeController.text.trim().isEmpty ? sub.code : codeController.text.trim().toUpperCase(),
+                    name: nameController.text.trim().isEmpty ? sub.name : nameController.text.trim(),
+                    professor: profController.text.trim().isEmpty ? sub.professor : profController.text.trim(),
+                    schedule: scheduleController.text.trim(),
+                  );
+                  await StorageService.instance.updateSubject(updated);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    _loadSubjects();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${updated.code} updated!'),
+                        backgroundColor: AppColors.royalBlue,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Save Changes'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.royalBlue,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ),
           ],
@@ -473,11 +575,23 @@ class _SemesterSubjectsScreenState extends State<SemesterSubjectsScreen> {
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20, color: AppColors.onSurfaceVariant),
                   onSelected: (value) {
-                    if (value == 'delete') {
+                    if (value == 'edit') {
+                      _showEditSubjectDialog(sub);
+                    } else if (value == 'delete') {
                       _showDeleteSubjectConfirm(sub);
                     }
                   },
                   itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, color: AppColors.royalBlue, size: 18),
+                          SizedBox(width: 8),
+                          Text('Edit Course'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
                       value: 'delete',
                       child: Row(
