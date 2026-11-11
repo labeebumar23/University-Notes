@@ -209,10 +209,7 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
       ),
     );
 
-    final result = await DriveService.instance.uploadPdf(
-      filePath: pdf.filePath,
-      fileName: pdf.title,
-    );
+    final result = await DriveService.instance.uploadPdf(pdf);
 
     if (result.success) {
       final updated = pdf.copyWith(
@@ -250,10 +247,7 @@ class _SubjectWorkspaceScreenState extends State<SubjectWorkspaceScreen> {
       ),
     );
 
-    final result = await DriveService.instance.uploadAudio(
-      filePath: lecture.audioFilePath,
-      fileName: '${lecture.title}.m4a',
-    );
+    final result = await DriveService.instance.uploadLectureAudio(lecture);
 
     if (result.success) {
       final updated = lecture.copyWith(
